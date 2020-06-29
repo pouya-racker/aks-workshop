@@ -1,3 +1,6 @@
+# Traffic to EXTERNAL_IP is routed to the service named aks-helloworld-one.
+# Traffic to EXTERNAL_IP/hello-world-two is routed to the aks-helloworld-two service.
+
 apiVersion: extensions/v1beta1
 kind: Ingress
 metadata:

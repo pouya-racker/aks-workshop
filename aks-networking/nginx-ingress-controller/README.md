@@ -48,7 +48,7 @@ The client source IP is stored in the request header under X-Forwarded-For.
 
 [demo-app-1](aks-helloworld-one.yaml)
 
-[demo-app-1](aks-helloworld-two.yaml)
+[demo-app-2](aks-helloworld-two.yaml)
 
 [ingress](aks-helloworld-ingress.yaml)
 
@@ -71,16 +71,19 @@ kubectl create secret tls aks-ingress-tls \
     --key aks-ingress-tls.key \
     --cert aks-ingress-tls.crt
 ```
+**Create demo application and Ingress resource**
 
 `kubectl apply -f`
 
+[demo-app-1](./tls-ingress/aks-helloworld.yaml)
+
+[demo-app-2](./tls-ingress/ingress-demo.yaml)
+
 [tls-ingress](aks-helloworld-tls-ingress.yaml)
 
-Test the ingress configuration
-
-Use curl and specify the `--resolve` parameter. This parameter lets you map the demo.azure.com name to the public IP address of your ingress controller. 
+Test the ingress configuration. Use curl and specify the `--resolve` parameter. This parameter lets you map the demo.azure.com name to the public IP address of your ingress controller. 
 Specify the public IP address of your own ingress controller
 
-`curl -v -k --resolve demo.azure.com:$PUBLIC_IP https://demo.azure.com`
+`curl -v -k --resolve demo.azure.com:443:$PUBLIC_IP https://demo.azure.com`
 
 For using ingress with internal loadbalancer see: [ingress-internal-ip](https://docs.microsoft.com/en-us/azure/aks/ingress-internal-ip)
