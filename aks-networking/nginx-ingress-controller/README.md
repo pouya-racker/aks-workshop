@@ -12,7 +12,7 @@ We will use Helm 3 to install NGINX ingress controller.
 
 ``az aks get-credentials --resource-group RESOURCE_GROUP_NAME --name AKS_CLUSTER_NAME``
 
-###Installation
+### Installation
 Create an ingress controller namespace
 
 `kubectl create namespace ingress-basic`
