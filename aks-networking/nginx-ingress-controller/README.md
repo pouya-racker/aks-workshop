@@ -4,11 +4,11 @@
 -Make sure you have the Helm CLI installed or user Azure CloudShell. See [Installing Helm](https://helm.sh/docs/intro/install/),
 We will use Helm 3 to install NGINX ingress controller.
 
--Create AKS cluster.
+- Create AKS cluster.
 
--Install Azure CLI `az` and `kubectl` locally or use Azure CloudShell.
+- Install Azure CLI `az` and `kubectl` locally or use Azure CloudShell.
 
--Use following command to fetch the AKS cluster credentials
+- Use following command to fetch the AKS cluster credentials
 
 ``az aks get-credentials --resource-group RESOURCE_GROUP_NAME --name AKD_CLUSTER_NAME``
 
