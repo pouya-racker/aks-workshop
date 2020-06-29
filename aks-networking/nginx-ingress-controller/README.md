@@ -10,7 +10,7 @@ We will use Helm 3 to install NGINX ingress controller.
 
 - Use following command to fetch the AKS cluster credentials
 
-``az aks get-credentials --resource-group RESOURCE_GROUP_NAME --name AKD_CLUSTER_NAME``
+``az aks get-credentials --resource-group RESOURCE_GROUP_NAME --name AKS_CLUSTER_NAME``
 
 ###Installation
 Create an ingress controller namespace
