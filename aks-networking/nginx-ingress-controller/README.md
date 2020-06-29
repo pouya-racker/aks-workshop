@@ -86,4 +86,6 @@ Specify the public IP address of your own ingress controller
 
 `curl -v -k --resolve demo.azure.com:443:$PUBLIC_IP https://demo.azure.com`
 
+`curl -v -k --resolve demo.azure.com:443:$PUBLIC_IP https://demo.azure.com/hello-world-two`
+
 For using ingress with internal loadbalancer see: [ingress-internal-ip](https://docs.microsoft.com/en-us/azure/aks/ingress-internal-ip)
