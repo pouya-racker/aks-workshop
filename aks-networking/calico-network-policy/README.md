@@ -3,9 +3,6 @@
 ### Before you begin
 - Create AKS cluster and enable Calico network policy.
 
-**NOTE:** Use Managed Identity while creating AKS cluster, also make sure that assigned Managed Identity 
-has "Contributor" permission to the AKS virtual network. 
-
 - Install Azure CLI `az` and `kubectl` locally or use Azure CloudShell.
 
 - Use following command to fetch the AKS cluster credentials
