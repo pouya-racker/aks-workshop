@@ -1,3 +1,4 @@
+########## External LB ##########
 apiVersion: v1
 kind: Service
 metadata:
@@ -9,3 +10,16 @@ spec:
   ports:
   - port: 80
     targetPort: 80
+########## Internal LB  ##########
+apiVersion: v1
+kind: Service
+metadata:
+  name: internal-app
+  annotations:
+    service.beta.kubernetes.io/azure-load-balancer-internal: "true"
+spec:
+  type: LoadBalancer
+  ports:
+  - port: 80
+  selector:
+    app: internal-app
