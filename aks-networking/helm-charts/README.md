@@ -22,9 +22,7 @@ To update the list of charts, use the helm repo update command.
 
 Run helm charts:
 
-`helm install my-nginx-ingress stable/nginx-ingress \
-    --set controller.nodeSelector."beta\.kubernetes\.io/os"=linux \
-    --set defaultBackend.nodeSelector."beta\.kubernetes\.io/os"=linux`
+`helm install my-nginx-ingress stable/nginx-ingress --set controller.nodeSelector."beta\.kubernetes\.io/os"=linux --set defaultBackend.nodeSelector."beta\.kubernetes\.io/os"=linux`
     
 List releases:
 
