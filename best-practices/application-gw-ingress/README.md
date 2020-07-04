@@ -79,13 +79,13 @@ The next few steps will add the following list of components to your Azure subsc
 
     az group create -n $resourceGroupName -l $location
 
-    az group deployment create -g $resourceGroupName -n $deploymentName --template-file template.json --parameters parameters.json
+    az deployment group create -g $resourceGroupName -n $deploymentName --template-file template.json --parameters parameters.json
     ```
     Note: The last command may take a few minutes to complete.
 
 1. Once the deployment finished, download the deployment output into a file named `deployment-outputs.json`.
     ```bash
-    az group deployment show -g $resourceGroupName -n $deploymentName --query "properties.outputs" -o json > deployment-outputs.json
+    az deployment group show -g $resourceGroupName -n $deploymentName --query "properties.outputs" -o json > deployment-outputs.json
     ```
     View the content of the newly created file with: `cat deployment-outputs.json`. The file will have the following shape (example):
     ```json
