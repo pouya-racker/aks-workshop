@@ -23,80 +23,279 @@ We will use Helm 3 to install NGINX ingress controller.
 
 - Install `jq` JSON processor or use Azure CloudShell.
 
-### Installation
-Create an ingress controller namespace
+### Create an Identity
 
-`kubectl create namespace ingress-basic`
+Follow the steps below to create an Azure Active Directory (AAD) [service principal object](https://docs.microsoft.com/en-us/azure/active-directory/develop/app-objects-and-service-principals#service-principal-object). Please record the `appId`, `password`, and `objectId` values - these will be used in the following steps.
 
-Add the official stable repository
+1. Create AD service principal ([Read more about RBAC](https://docs.microsoft.com/en-us/azure/role-based-access-control/overview)). Paste the following lines in your [Azure Cloud Shell](https://shell.azure.com/):
+    ```bash
+    az ad sp create-for-rbac --skip-assignment -o json > auth.json
+    appId=$(jq -r ".appId" auth.json)
+    password=$(jq -r ".password" auth.json)
+    ```
+        These commands will create `appId` and `password` bash variables, which will be used in the steps below. You can view the value of these with `echo $appId` and `echo $password`.
 
-`helm repo add stable https://kubernetes-charts.storage.googleapis.com/`
 
-Use Helm to deploy an NGINX ingress controller
+1. Execute the next command in [Cloud Shell](https://shell.azure.com/) to create the `objectId` bash variable, which is the new Service Princpial:
+    ```bash
+    objectId=$(az ad sp show --id $appId --query "objectId" -o tsv)
+    ```
+    The `objectId` bash variable will be used in the ARM template below. View the value with `echo $objectId`.
 
+1. Paste the entire command below (it is a single command on multiple lines) in [Cloud Shell](https://shell.azure.com/) to create the parameters.json file. It will be used in the ARM template deployment.
+    ```bash
+    cat <<EOF > parameters.json
+    {
+      "aksServicePrincipalAppId": { "value": "$appId" },
+      "aksServicePrincipalClientSecret": { "value": "$password" },
+      "aksServicePrincipalObjectId": { "value": "$objectId" },
+      "aksEnableRBAC": { "value": false }
+    }
+    EOF
+    ```
+    To deploy an **RBAC** enabled cluster, set the `aksEnabledRBAC` field to `true`. View the contents of the newly created file with `cat parameters.json`. It will contain the values of the `appId`, `password`, and `objectId` bash variables from the previous steps.
+
+### Deploy Components
+The next few steps will add the following list of components to your Azure subscription:
+
+- [Azure Kubernetes Service](https://docs.microsoft.com/en-us/azure/aks/intro-kubernetes)
+- [Application Gateway](https://docs.microsoft.com/en-us/azure/application-gateway/overview) v2
+- [Virtual Network](https://docs.microsoft.com/en-us/azure/virtual-network/virtual-networks-overview) with 2 [subnets](https://docs.microsoft.com/en-us/azure/virtual-network/virtual-networks-overview)
+- [Public IP Address](https://docs.microsoft.com/en-us/azure/virtual-network/virtual-network-public-ip-address)
+- [Managed Identity](https://docs.microsoft.com/en-us/azure/active-directory/managed-identities-azure-resources/overview), which will be used by [AAD Pod Identity](https://github.com/Azure/aad-pod-identity/blob/master/README.md)
+
+1. Download the ARM template into template.json file. Paste the following in your [shell](https://shell.azure.com/):
+    ```bash
+    wget https://raw.githubusercontent.com/Azure/application-gateway-kubernetes-ingress/master/deploy/azuredeploy.json -O template.json
+    ```
+
+1. Deploy the ARM template via [Azure Cloud Shell](https://shell.azure.com/) and the `az` tool. Modify the name of the resource group and region/location, then paste each of the following lines into your [shell](https://shell.azure.com/):
+    ```bash
+    resourceGroupName="MyResourceGroup"
+
+    location="westus2"
+
+    deploymentName="ingress-appgw"
+
+    az group create -n $resourceGroupName -l $location
+
+    az group deployment create -g $resourceGroupName -n $deploymentName --template-file template.json --parameters parameters.json
+    ```
+    Note: The last command may take a few minutes to complete.
+
+1. Once the deployment finished, download the deployment output into a file named `deployment-outputs.json`.
+    ```bash
+    az group deployment show -g $resourceGroupName -n $deploymentName --query "properties.outputs" -o json > deployment-outputs.json
+    ```
+    View the content of the newly created file with: `cat deployment-outputs.json`. The file will have the following shape (example):
+    ```json
+    {
+      "aksApiServerAddress": {
+        "type": "String",
+        "value": "aks-abcd41e9.hcp.westus2.azmk8s.io"
+      },
+      "aksClusterName": {
+        "type": "String",
+        "value": "aksabcd"
+      },
+      "applicationGatewayName": {
+        "type": "String",
+        "value": "applicationgatewayabcd"
+      },
+      "identityClientId": {
+        "type": "String",
+        "value": "7b1a3378-8abe-ab58-cca9-a8ef624db293"
+      },
+      "identityResourceId": {
+        "type": "String",
+        "value": "/subscriptions/a6466a81-bf0d-147e-2acb-a0ba50f6456e/resourceGroups/MyResourceGroup/providers/Microsoft.ManagedIdentity/userAssignedIdentities/appgwContrIdentityabcd"
+      },
+      "resourceGroupName": {
+        "type": "String",
+        "value": "MyResourceGroup"
+      },
+      "subscriptionId": {
+        "type": "String",
+        "value": "a6466a81-bf0d-147e-2acb-a0ba50f6456e"
+      }
+    }
+    ```
+
+## Set up Application Gateway Ingress Controller
+
+With the instructions in the previous section we created and configured a new AKS cluster and
+an App Gateway. We are now ready to deploy a sample app and an ingress controller to our new
+Kubernetes infrastructure.
+
+### Setup Kubernetes Credentials
+For the following steps we need setup [kubectl](https://kubectl.docs.kubernetes.io/) command,
+which we will use to connect to our new Kubernetes cluster. [Cloud Shell](https://shell.azure.com/) has `kubectl` already installed. We will use `az` CLI to obtain credentials for Kubernetes.
+
+Get credentials for your newly deployed AKS ([read more](https://docs.microsoft.com/en-us/azure/aks/kubernetes-walkthrough#connect-to-the-cluster)):
+```bash
+# use the deployment-outputs.json created after deployment to get the cluster name and resource group name
+aksClusterName=$(jq -r ".aksClusterName.value" deployment-outputs.json)
+resourceGroupName=$(jq -r ".resourceGroupName.value" deployment-outputs.json)
+
+az aks get-credentials --resource-group $resourceGroupName --name $aksClusterName
 ```
-helm install nginx-ingress stable/nginx-ingress \
-    --namespace ingress-basic \
-    --set controller.replicaCount=2 \
-    --set controller.nodeSelector."beta\.kubernetes\.io/os"=linux \
-    --set defaultBackend.nodeSelector."beta\.kubernetes\.io/os"=linux
+
+### Install AAD Pod Identity
+  Azure Active Directory Pod Identity provides token-based access to
+  [Azure Resource Manager (ARM)](https://docs.microsoft.com/en-us/azure/azure-resource-manager/resource-group-overview).
+
+  [AAD Pod Identity](https://github.com/Azure/aad-pod-identity) will add the following components to your Kubernetes cluster:
+   1. Kubernetes [CRDs](https://kubernetes.io/docs/tasks/access-kubernetes-api/custom-resources/custom-resource-definitions/): `AzureIdentity`, `AzureAssignedIdentity`, `AzureIdentityBinding`
+   1. [Managed Identity Controller (MIC)](https://github.com/Azure/aad-pod-identity#managed-identity-controller) component
+   1. [Node Managed Identity (NMI)](https://github.com/Azure/aad-pod-identity#node-managed-identity) component
+
+
+  To install AAD Pod Identity to your cluster:
+
+   - *RBAC enabled* AKS cluster
+
+  ```bash
+  kubectl apply -f https://raw.githubusercontent.com/Azure/aad-pod-identity/v1.5.5/deploy/infra/deployment-rbac.yaml
+  ```
+
+   - *RBAC disabled* AKS cluster
+
+  ```bash
+  kubectl apply -f https://raw.githubusercontent.com/Azure/aad-pod-identity/v1.5.5/deploy/infra/deployment.yaml
+  ```
+
+### Install Helm
+[Helm](https://docs.microsoft.com/en-us/azure/aks/kubernetes-helm) is a package manager for
+Kubernetes. This document will use version 3 of helm, which is not backwards compatbile with previous versions.
+
+1. Add the AGIC Helm repository:
+    ```bash
+    helm repo add application-gateway-kubernetes-ingress https://appgwingress.blob.core.windows.net/ingress-azure-helm-package/
+    helm repo update
+    ```
+
+### Install Ingress Controller Helm Chart
+
+1. Use the `deployment-outputs.json` file created above and create the following variables.
+    ```bash
+    applicationGatewayName=$(jq -r ".applicationGatewayName.value" deployment-outputs.json)
+    resourceGroupName=$(jq -r ".resourceGroupName.value" deployment-outputs.json)
+    subscriptionId=$(jq -r ".subscriptionId.value" deployment-outputs.json)
+    identityClientId=$(jq -r ".identityClientId.value" deployment-outputs.json)
+    identityResourceId=$(jq -r ".identityResourceId.value" deployment-outputs.json)
+    ```
+2. Download [helm-config.yaml](../examples/sample-helm-config.yaml), which will configure AGIC:
+    ```bash
+    wget https://raw.githubusercontent.com/Azure/application-gateway-kubernetes-ingress/master/docs/examples/sample-helm-config.yaml -O helm-config.yaml
+    ```
+
+3. Edit the newly downloaded [helm-config.yaml](../examples/sample-helm-config.yaml) and fill out the sections `appgw` and `armAuth`.
+    ```bash
+    sed -i "s|<subscriptionId>|${subscriptionId}|g" helm-config.yaml
+    sed -i "s|<resourceGroupName>|${resourceGroupName}|g" helm-config.yaml
+    sed -i "s|<applicationGatewayName>|${applicationGatewayName}|g" helm-config.yaml
+    sed -i "s|<identityResourceId>|${identityResourceId}|g" helm-config.yaml
+    sed -i "s|<identityClientId>|${identityClientId}|g" helm-config.yaml
+
+    # You can further modify the helm config to enable/disable features
+    nano helm-config.yaml
+    ```
+
+Values:
+- `verbosityLevel`: Sets the verbosity level of the AGIC logging infrastructure. See [Logging Levels](https://github.com/Azure/application-gateway-kubernetes-ingress/blob/463a87213bbc3106af6fce0f4023477216d2ad78/docs/troubleshooting.md#logging-levels) for possible values.
+- `appgw.subscriptionId`: The Azure Subscription ID in which App Gateway resides. Example: `a123b234-a3b4-557d-b2df-a0bc12de1234`
+- `appgw.resourceGroup`: Name of the Azure Resource Group in which App Gateway was created. Example: `app-gw-resource-group`
+- `appgw.name`: Name of the Application Gateway. Example: `applicationgatewayd0f0`
+- `appgw.usePrivateIP`: The boolean flag if all Ingresses are exposed over Private IP. Set to `false` should you use an [Application Gateway v2 SKU](https://github.com/Azure/application-gateway-kubernetes-ingress/blob/master/docs/features/private-ip.md#assign-globally)
+- `appgw.shared`: This boolean flag should be defaulted to `false`. Set to `true` should you need a [Shared App Gateway](https://github.com/Azure/application-gateway-kubernetes-ingress/blob/072626cb4e37f7b7a1b0c4578c38d1eadc3e8701/docs/setup/install-existing.md#multi-cluster--shared-app-gateway).
+- `kubernetes.watchNamespace`: Specify the name space, which AGIC should watch. This could be a single string value, or a comma-separated list of namespaces.
+- `armAuth.type`: could be `aadPodIdentity` or `servicePrincipal`
+- `armAuth.identityResourceID`: Resource ID of the Azure Managed Identity
+- `armAuth.identityClientId`: The Client ID of the Identity. See below for more information on Identity
+- `armAuth.secretJSON`: Only needed when Service Principal Secret type is chosen (when `armAuth.type` has been set to `servicePrincipal`)
+- `rbac.enabled`: Make sure to set this to true if you have a AKS cluster that is RBAC enabled.
+
+   Note on Identity: The `identityResourceID` and `identityClientID` are values that were created
+   during the [Create an Identity](https://github.com/Azure/application-gateway-kubernetes-ingress/blob/072626cb4e37f7b7a1b0c4578c38d1eadc3e8701/docs/setup/install-new.md#create-an-identity)
+   steps, and could be obtained again using the following command:
+   ```bash
+   az identity show -g <resource-group> -n <identity-name>
+   ```
+- `<resource-group>` in the command above is the resource group of your App Gateway.
+- `<identity-name>` is the name of the created identity. All identities for a given subscription can be listed using: `az identity list`
+
+
+4. Install the Application Gateway ingress controller package:
+
+    ```bash
+    helm install ingress-azure \
+      -f helm-config.yaml \
+      application-gateway-kubernetes-ingress/ingress-azure \
+      --version 1.0.0
+    ```
+
+    >Note: Use at least version 1.2.0-rc3, e.g. `--version 1.2.0-rc3`, when installing on k8s version >= 1.16
+
+### Install a Sample App
+Now that we have App Gateway, AKS, and AGIC installed we can install a sample app
+via [Azure Cloud Shell](https://shell.azure.com/):
+
+```yaml
+cat <<EOF | kubectl apply -f -
+apiVersion: v1
+kind: Pod
+metadata:
+  name: aspnetapp
+  labels:
+    app: aspnetapp
+spec:
+  containers:
+  - image: "mcr.microsoft.com/dotnet/core/samples:aspnetapp"
+    name: aspnetapp-image
+    ports:
+    - containerPort: 80
+      protocol: TCP
+
+---
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: aspnetapp
+spec:
+  selector:
+    app: aspnetapp
+  ports:
+  - protocol: TCP
+    port: 80
+    targetPort: 80
+
+---
+
+apiVersion: extensions/v1beta1
+kind: Ingress
+metadata:
+  name: aspnetapp
+  annotations:
+    kubernetes.io/ingress.class: azure/application-gateway
+spec:
+  rules:
+  - http:
+      paths:
+      - path: /
+        backend:
+          serviceName: aspnetapp
+          servicePort: 80
+EOF
 ```
-    
-**Tips:**
 
-- For added redundancy, two replicas of the NGINX ingress controllers are deployed with the `--set controller.replicaCount` parameter. 
-To fully benefit from running replicas of the ingress controller, make sure there's more than one node in your AKS cluster.
+Alternatively you can:
 
-- The ingress controller also needs to be scheduled on a Linux node. Windows Server nodes shouldn't run the ingress controller. 
-A node selector is specified using the `--set nodeSelector` parameter to tell the Kubernetes scheduler to run the NGINX ingress controller on a Linux-based node.
-
-- If you would like to enable client source IP preservation for requests to containers in your cluster, add `--set controller.service.externalTrafficPolicy=Local` to the Helm install command. 
-The client source IP is stored in the request header under X-Forwarded-For.
-
-**Create demo application and Ingress resource**
-
-`kubectl apply -f`
-
-[demo-app-1](aks-helloworld-one.yaml)
-
-[demo-app-2](aks-helloworld-two.yaml)
-
-[ingress](aks-helloworld-ingress.yaml)
-
-### HTTPS Ingress with TLS certificate
-The following example generates a 2048-bit RSA X509 certificate valid for 365 days named aks-ingress-tls.crt. 
-The private key file is named aks-ingress-tls.key. A Kubernetes TLS secret requires both of these files.
-
-```
-openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
-    -out aks-ingress-tls.crt \
-    -keyout aks-ingress-tls.key \
-    -subj "/CN=demo.azure.com/O=aks-ingress-tls"
+1. Download the YAML file above:
+```bash
+curl https://raw.githubusercontent.com/Azure/application-gateway-kubernetes-ingress/master/docs/examples/aspnetapp.yaml -o aspnetapp.yaml
 ```
 
-Create Kubernetes Secret for the TLS certification
-
-```
-kubectl create secret tls aks-ingress-tls \
-    --namespace ingress-basic \
-    --key aks-ingress-tls.key \
-    --cert aks-ingress-tls.crt
-```
-**Create demo application and Ingress resource**
-
-`kubectl apply -f`
-
-[demo-app-1](./tls-ingress/aks-helloworld.yaml)
-
-[demo-app-2](./tls-ingress/ingress-demo.yaml)
-
-[tls-ingress](aks-helloworld-tls-ingress.yaml)
-
-Test the ingress configuration. Use curl and specify the `--resolve` parameter. This parameter lets you map the demo.azure.com name to the public IP address of your ingress controller. 
-Specify the public IP address of your own ingress controller
-
-`curl -v -k --resolve demo.azure.com:443:$PUBLIC_IP https://demo.azure.com`
-
-`curl -v -k --resolve demo.azure.com:443:$PUBLIC_IP https://demo.azure.com/hello-world-two`
-
-For using ingress with internal loadbalancer see: [ingress-internal-ip](https://docs.microsoft.com/en-us/azure/aks/ingress-internal-ip)
+2. Apply the YAML file:
+```bash
+kubectl apply -f aspnetapp.yaml
