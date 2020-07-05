@@ -68,7 +68,7 @@ az aks get-credentials -n myCluster -g myAKS-rg
 Run the following command to set up a sample application that uses AGIC for Ingress to the cluster. AGIC will update the Application Gateway we set up earlier with corresponding routing rules to the new sample application you deployed.  
 
 ```azurecli-interactive
-kubectl apply -f https://raw.githubusercontent.com/Azure/application-gateway-kubernetes-ingress/master/docs/examples/aspnetapp.yaml 
+kubectl apply -f https://raw.githubusercontent.com/pouya-racker/aks-workshop/master/best-practices/application-gw-ingress/aspnetapp.yaml 
 ```
 
 ## Check that the application is reachable
