@@ -28,7 +28,9 @@ Each AKS cluster includes two pre-created storage classes, both configured to wo
     * Premium disks are backed by SSD-based high-performance, low-latency disk. Perfect for VMs running production workload. If the AKS nodes in your cluster use premium storage, select the *managed-premium* class.
     
 > [!NOTE]
+
 > An Azure disk can only be mounted with *Access mode* type *ReadWriteOnce*, which makes it available to only a single pod in AKS. If you need to share a persistent volume across multiple pods, use *Azure Files*.
+
 > These default storage classes don't allow you to update the volume size once created. 
 
 ### Create a persistent volume claim
