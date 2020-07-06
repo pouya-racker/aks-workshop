@@ -4,7 +4,7 @@
 
 - Install Azure CLI `az` and `kubectl` locally or use Azure CloudShell.
 
-- Create an AKS cluster with Windows node pool based on [create-windows-node-pool demo.
+- Create an AKS cluster with Windows node pool based on [create-windows-node-pool](https://github.com/pouya-racker/aks-workshop/tree/master/windows-containers/create-windows-node-pool) demo.
 
 ### Deploy a virtual machine to the same subnet as your cluster
 
