@@ -29,12 +29,12 @@ az vm create \
     --admin-username azureuser \
     --admin-password myP@ssw0rd12 \
     --subnet $SUBNET_ID \
-    --query pu
+    --query publicIpAddress -o tsv
 ```
 
 ### Allow access to the virtual machine
 
-AKS node pool subnets are protected with NSGs (Network Security Groups) by default. To get access to the virtual machine, you'll have to enabled access in the NSG.
+AKS node pool subnets are protected with NSGs (Network Security Groups) by default. To get access to the virtual machine, you'll have to enable access in the NSG.
 
 > [!NOTE]
 > The NSGs are controlled by the AKS service. Any change you make to the NSG will be overwritten at any time by the control plane.
@@ -61,7 +61,7 @@ Get cluster credentials.
 az aks get-credentials --resource-group myResourceGroup --name myAKSCluster
 ```
 
-List the internal IP address of the Windows Server nodes using the [kubectl get][kubectl-get] command:
+List the internal IP address of the Windows Server nodes using the `kubectl get` command:
 
 ```console
 kubectl get nodes -o wide
@@ -77,7 +77,7 @@ You can now run any troubleshooting commands in the *cmd* window. Since Windows 
 
 ### Remove RDP access
 
-When done, exit the RDP connection to the Windows Server node then exit the RDP session to the virtual machine. After you exit both RDP sessions, delete the virtual machine with the [az vm delete][az-vm-delete] command:
+When done, exit the RDP connection to the Windows Server node then exit the RDP session to the virtual machine. After you exit both RDP sessions, delete the virtual machine with the `az vm delete` command:
 
 ```azurecli-interactive
 az vm delete --resource-group myResourceGroup --name myVM
