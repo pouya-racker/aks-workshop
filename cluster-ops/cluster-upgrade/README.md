@@ -1,4 +1,4 @@
-# Scale an AKS cluster manually
+# Upgrading an AKS cluster
 
 ### Before you begin
 
