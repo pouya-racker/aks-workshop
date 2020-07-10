@@ -91,7 +91,7 @@ kubectl get service azure-vote-front
 
 Now open a local web browser to the IP address of your service.
 
-###Rolling Back to a Previous Revision
+### Rolling Back to a Previous Revision
 
 Follow the steps given below to rollback the Deployment from the current version to the previous version, which is version 1.
 
