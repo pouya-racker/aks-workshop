@@ -65,28 +65,30 @@ Once the persistent volume claim has been created and the disk successfully prov
 azure-pvc-disk.yaml
 
 ```yaml
-kind: Pod
-apiVersion: v1
+apiVersion: apps/v1
+kind: Deployment
 metadata:
-  name: mypod
+  name: nginx
 spec:
-  containers:
-  - name: mypod
-    image: nginx:1.15.5
-    resources:
-      requests:
-        cpu: 100m
-        memory: 128Mi
-      limits:
-        cpu: 250m
-        memory: 256Mi
-    volumeMounts:
-    - mountPath: "/mnt/azure"
-      name: volume
-  volumes:
-    - name: volume
-      persistentVolumeClaim:
-        claimName: azure-managed-disk
+  replicas: 1
+  selector:
+    matchLabels:
+      app: nginx
+  template:
+    metadata:
+      labels:
+        app: nginx
+    spec:
+      containers:
+      - name: nginx
+        image: nginx
+        volumeMounts:
+        - mountPath: "/mnt/azure"
+          name: volume
+      volumes:
+        - name: volume
+          persistentVolumeClaim:
+            claimName: azure-managed-disk
 ```
 
 `kubectl apply -f azure-pvc-disk.yaml`
@@ -96,7 +98,7 @@ spec:
 This configuration can be seen when inspecting your pod via `kubectl describe pod mypod`, as shown in the following condensed example:
 
 ```console
-$ kubectl describe pod mypod
+$ kubectl describe pod $POD_NAME
 
 [...]
 Volumes:
