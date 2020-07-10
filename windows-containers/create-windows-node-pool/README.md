@@ -17,7 +17,9 @@ az aks create \
     --enable-addons monitoring \
     --kubernetes-version 1.16.7 \
     --generate-ssh-keys \
-    --network-plugin azure
+    --network-plugin azure \
+    --windows-admin-password myP@ssw0rd12 \
+    --windows-admin-username azureuser 
 ```
 
 ### Add a Windows Server node pool
