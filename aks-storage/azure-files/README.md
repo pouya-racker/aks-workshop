@@ -20,7 +20,7 @@ az aks create \
 
 ### Create a storage class
 
-A storage class is used to define how an Azure file share is created. A storage account is automatically created in the [node resource group][node-resource-group] for use with the storage class to hold the Azure file shares. Choose of the following [Azure storage redundancy][storage-skus] for *skuName*:
+A storage class is used to define how an Azure file share is created. A storage account is automatically created in the **node resource group** for use with the storage class to hold the Azure file shares. Choose of the following Azure storage redundancy for *skuName*:
 
 * *Standard_LRS* - standard locally redundant storage (LRS)
 * *Standard_GRS* - standard geo-redundant storage (GRS)
