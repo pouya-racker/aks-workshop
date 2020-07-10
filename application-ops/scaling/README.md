@@ -1,4 +1,4 @@
-# Scale an AKS cluster manually
+# Scale an AKS application
 
 ### Before you begin
 

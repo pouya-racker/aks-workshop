@@ -1,4 +1,4 @@
-# Scale an AKS cluster manually
+# Update an AKS application
 
 ### Before you begin
 
@@ -33,80 +33,70 @@ Voting app is exposed publicly using a LoadBalancer service, retrieve the LB's p
 
 `kubectl get svc`  
 
-### Manually scale pods
+### Deploy the updated application
 
-When the Azure Vote front-end and Redis instance were deployed in previous tutorials, a single replica was created.
-To manually change the number of pods in the azure-vote-front deployment, use the `kubectl scale` command. The following example increases the number of front-end pods to 5: 
+To provide maximum uptime, multiple instances of the application pod must be running. Verify the number of running front-end instances with the `ubectl get pods` command:
 
-`kubectl scale --replicas=5 deployment/azure-vote-front`
+```
+$ kubectl get pods
 
-Run `kubectl get pods` again to verify that AKS creates the additional pods.
-
-### Autoscale pods
-
-Kubernetes supports [horizontal pod autoscaling](https://kubernetes.io/docs/tasks/run-application/horizontal-pod-autoscale/) to adjust the number of pods in a deployment depending on CPU utilization or other select metrics. The [Metrics Server](https://kubernetes.io/docs/tasks/debug-application-cluster/resource-metrics-pipeline/#metrics-server) is used to provide resource utilization to Kubernetes, and is automatically deployed in AKS clusters versions 1.10 and higher.
-
-To use the autoscaler, all containers in your pods and your pods must have CPU requests and limits defined. In the `azure-vote-front` deployment, the front-end container already requests 0.25 CPU, with a limit of 0.5 CPU. These resource requests and limits are defined as shown in the following example snippet:
-
-```yaml
-resources:
-  requests:
-     cpu: 250m
-  limits:
-     cpu: 500m
+NAME                               READY     STATUS    RESTARTS   AGE
+azure-vote-back-217588096-5w632    1/1       Running   0          10m
+azure-vote-front-233282510-b5pkz   1/1       Running   0          10m
+azure-vote-front-233282510-dhrtr   1/1       Running   0          10m
+azure-vote-front-233282510-pqbfk   1/1       Running   0          10m
 ```
 
-The following example uses the `kubectl autoscale` command to autoscale the number of pods in the *azure-vote-front* deployment. If average CPU utilization across all pods exceeds 50% of their requested usage, the autoscaler increases the pods up to a maximum of *10* instances. A minimum of *3* instances is then defined for the deployment:
+If you don't have multiple front-end pods, scale the *azure-vote-front* deployment as follows:
 
 ```console
-kubectl autoscale deployment azure-vote-front --cpu-percent=50 --min=3 --max=10
+kubectl scale --replicas=3 deployment/azure-vote-front
 ```
 
-Alternatively, you can create a manifest file to define the autoscaler behavior and resource limits. The following is an example of a manifest file named `azure-vote-hpa.yaml`.
+To update the application, use the `kubectl set` command. 
 
-```yaml
-apiVersion: autoscaling/v1
-kind: HorizontalPodAutoscaler
-metadata:
-  name: azure-vote-back-hpa
-spec:
-  maxReplicas: 10 # define max replica count
-  minReplicas: 3  # define min replica count
-  scaleTargetRef:
-    apiVersion: apps/v1
-    kind: Deployment
-    name: azure-vote-back
-  targetCPUUtilizationPercentage: 50 # target CPU utilization
-
----
-
-apiVersion: autoscaling/v1
-kind: HorizontalPodAutoscaler
-metadata:
-  name: azure-vote-front-hpa
-spec:
-  maxReplicas: 10 # define max replica count
-  minReplicas: 3  # define min replica count
-  scaleTargetRef:
-    apiVersion: apps/v1
-    kind: Deployment
-    name: azure-vote-front
-  targetCPUUtilizationPercentage: 50 # target CPU utilization
+```console
+kubectl set image deployment azure-vote-front azure-vote-front=microsoft/azure-vote-front:v2
 ```
 
-Use `kubectl apply` to apply the autoscaler defined in the `azure-vote-hpa.yaml` manifest file.
+To monitor the deployment, use the `kubectl get pod` command. As the updated application is deployed, your pods are terminated and re-created with the new container image.
 
-```
-kubectl apply -f azure-vote-hpa.yaml
-```
-
-To see the status of the autoscaler, use the `kubectl get hpa` command as follows:
-
-```
-kubectl get hpa
-
-NAME               REFERENCE                     TARGETS    MINPODS   MAXPODS   REPLICAS   AGE
-azure-vote-front   Deployment/azure-vote-front   0% / 50%   3         10        3          2m
+```console
+kubectl get pods
 ```
 
-After a few minutes, with minimal load on the Azure Vote app, the number of pod replicas decreases automatically to three. You can use `kubectl get pods` again to see the unneeded pods being removed.
+The following example output shows pods terminating and new instances running as the deployment progresses:
+
+To see the rollout status run:
+
+`kubectl rollout status deployment azure-vote-front`
+
+```
+$ kubectl get pods
+
+NAME                               READY     STATUS        RESTARTS   AGE
+azure-vote-back-2978095810-gq9g0   1/1       Running       0          5m
+azure-vote-front-1297194256-tpjlg  1/1       Running       0          1m
+azure-vote-front-1297194256-tptnx  1/1       Running       0          5m
+azure-vote-front-1297194256-zktw9  1/1       Terminating   0          1m
+```
+
+### Test the updated application
+
+To view the update application, first get the external IP address of the `azure-vote-front` service:
+
+```console
+kubectl get service azure-vote-front
+```
+
+Now open a local web browser to the IP address of your service.
+
+###Rolling Back to a Previous Revision
+
+Follow the steps given below to rollback the Deployment from the current version to the previous version, which is version 1.
+
+`kubectl rollout undo deployment azure-vote-front`
+
+The output is similar to this:
+
+`deployment.apps/azure-vote-front rolled back`
