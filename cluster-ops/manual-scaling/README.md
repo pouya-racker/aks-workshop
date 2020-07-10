@@ -30,7 +30,7 @@ az aks show --resource-group myResourceGroup --name myAKSCluster --query agentPo
 ```
 
 Use the az aks scale command to scale the cluster nodes. 
-The following example scales a cluster named myAKSCluster to a single node. 
+The following example scales a cluster named myAKSCluster. 
 Provide your own --nodepool-name from the previous command, such as nodepool1:
 
 ```azurecli
