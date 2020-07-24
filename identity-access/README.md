@@ -41,7 +41,7 @@ Create an AKS cluster, and enable administration access for your Azure AD group
 
 ```azurecli-interactive
 # Create an AKS-managed Azure AD cluster
-az aks create -g myResourceGroup -n myAKSCluster --enable-aad --aad-admin-group-object-ids <id> [--aad-tenant-id <id>]
+az aks create -g myResourceGroup -n myAKSCluster --node-count 1 --enable-aad --aad-admin-group-object-ids <id> --aad-tenant-id <id>
 ```
 
 ### Access an Azure AD enabled cluster
