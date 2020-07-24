@@ -34,14 +34,14 @@ Create an Azure resource group:
 
 ```azurecli-interactive
 # Create an Azure resource group
-az group create --name myResourceGroup --location centralus
+az group create --name myResourceGroup --location westus
 ```
 
 Create an AKS cluster, and enable administration access for your Azure AD group
 
 ```azurecli-interactive
 # Create an AKS-managed Azure AD cluster
-az aks create -g myResourceGroup -n myManagedCluster --enable-aad --aad-admin-group-object-ids <id> [--aad-tenant-id <id>]
+az aks create -g myResourceGroup -n myAKSCluster --enable-aad --aad-admin-group-object-ids <id> [--aad-tenant-id <id>]
 ```
 
 ### Access an Azure AD enabled cluster
