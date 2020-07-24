@@ -4,6 +4,9 @@ metadata:
   name: "myaks-5cf6"
 spec:
   replicas: 2
+  selector:
+    matchLabels:
+      app: "myaks-5cf6"
   template:
     metadata:
       labels:
