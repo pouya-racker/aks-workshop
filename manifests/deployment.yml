@@ -1,0 +1,16 @@
+apiVersion : apps/v1beta1
+kind: Deployment
+metadata:
+  name: "myaks-2172"
+spec:
+  replicas: 2
+  template:
+    metadata:
+      labels:
+        app: "myaks-2172"
+    spec:
+      containers:
+        - name: "myaks-2172"
+          image: "myacrpng.azurecr.io/myaks"
+          ports:
+          - containerPort: 80
